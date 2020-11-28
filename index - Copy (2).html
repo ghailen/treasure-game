@@ -1,0 +1,591 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Demo 01</title>
+		<script type="text/javascript" src="three.min.js" ></script>
+		<!--><script type="text/javascript" src="demo.js" ></script></!-->
+		<script type="text/javascript" src="MTLLoader.js" ></script>
+<script type="text/javascript" src="OBJLoader.js" ></script>
+
+	<script type="text/javascript" src="physi.js"></script>
+
+
+	</head>
+	<body style="text-align:center;">
+
+		<script type="text/javascript">
+
+"use strict";
+		Physijs.scripts.worker = 'physijs_worker.js';
+		Physijs.scripts.ammo = 'ammo.js';
+
+
+		var scene, camera, renderer, mesh, clock,render;
+		var meshFloor, ambientLight, light;
+
+		var box2,box,crate, crateTexture, crateNormalMap, crateBumpMap,meshmur,textmur,textmur2,textmur3,meshmur2,meshmur3,meshmur4,textfloor,mesh10;
+    var mur1,mur2,mur3,mur4,mur5,mur6,mur7,mur8,mur9,mur10,mur11,mur12;
+		var keyboard = {};
+		var player = { height:1.8, speed:0.2, turnSpeed:Math.PI*0.02, canShoot:0 };
+		var USE_WIREFRAME = false;
+
+		var loadingScreen = {
+			scene: new Physijs.Scene(),
+			camera: new THREE.PerspectiveCamera(90, 1280/720, 0.1, 100),
+			box: new THREE.Mesh(
+				new THREE.BoxGeometry(0.5,0.5,0.5),
+				new THREE.MeshBasicMaterial({ color:0x4444ff })
+			)
+		};
+		var loadingManager = null;
+		var RESOURCES_LOADED = false;
+
+		// Models index
+		var models = {
+			tent: {
+				obj:"models/Tent_Poles_01.obj",
+				mtl:"models/Tent_Poles_01.mtl",
+				mesh: null
+			},
+			campfire: {
+				obj:"models/Campfire_01.obj",
+				mtl:"models/Campfire_01.mtl",
+				mesh: null
+			},
+			pirateship: {
+				obj:"models/Pirateship.obj",
+				mtl:"models/Pirateship.mtl",
+				mesh: null
+			},
+			uzi: {
+				obj:"models/uziGold.obj",
+				mtl:"models/uziGold.mtl",
+				mesh: null,
+				castShadow:false
+			},
+			c: {
+				obj:"models/wall.obj",
+				mtl:"models/wall.mtl",
+				mesh: null,
+
+			}
+
+		};
+
+		// Meshes index
+		var meshes = {};
+
+		// Bullets array
+		var bullets = [];
+
+		function init(){
+			scene = new THREE.Scene();
+			scene.setGravity = new THREE.Vector3(100, 100,100);
+			camera = new THREE.PerspectiveCamera(90, 1280/720, 0.1, 1000);
+			clock = new THREE.Clock();
+
+			loadingScreen.box.position.set(0,0,5);
+			loadingScreen.camera.lookAt(loadingScreen.box.position);
+			loadingScreen.scene.add(loadingScreen.box);
+
+			loadingManager = new THREE.LoadingManager();
+			loadingManager.onProgress = function(item, loaded, total){
+				console.log(item, loaded, total);
+			};
+			loadingManager.onLoad = function(){
+				console.log("loaded all resources");
+				RESOURCES_LOADED = true;
+				onResourcesLoaded();
+			};
+
+			var handleCollision = function(collided_with, linearVelocity, angularVelocity) {
+       alert('hi');
+			}
+
+
+			mesh = new THREE.Mesh(
+				new THREE.BoxGeometry(1,1,1),
+				new THREE.MeshPhongMaterial({color:0xff4444,map:textfloor, wireframe:USE_WIREFRAME})
+			);
+			mesh.position.set(-10,1,-3);
+			mesh.receiveShadow = true;
+			mesh.castShadow = true;
+
+			scene.add(mesh);
+
+
+			// Box
+		//	box = new Physijs.BoxMesh(
+	//			 new THREE.CubeGeometry( 5, 5, 5 ),
+			//	 new THREE.MeshBasicMaterial({ color: 0x888888 })
+		//	);
+		//	box.addEventListener('collision', handleCollision);
+		//	scene.add( box );
+
+		//	box2 = new Physijs.BoxMesh(
+			//	 new THREE.CubeGeometry( 5, 5, 5 ),
+			//	 new THREE.MeshBasicMaterial({ color: 0x888888 })
+		//	);
+
+		//	scene.add( box2 );
+
+			meshFloor = new THREE.Mesh(
+				new THREE.PlaneGeometry(70,70, 10,20),
+				new THREE.MeshPhongMaterial({color:0xffffff,map:textfloor, wireframe:USE_WIREFRAME})
+			);
+			meshFloor.rotation.x -= Math.PI / 2;
+			meshFloor.receiveShadow = true;
+			scene.add(meshFloor);
+
+
+			ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+			scene.add(ambientLight);
+
+			light = new THREE.PointLight(0xffffff, 0.8, 18);
+			light.position.set(-3,6,-3);
+			light.castShadow = true;
+			light.shadow.camera.near = 0.1;
+			light.shadow.camera.far = 25;
+			scene.add(light);
+
+
+			var textureLoader = new THREE.TextureLoader(loadingManager);
+			crateTexture = textureLoader.load("crate0/crate0_diffuse.png");
+			crateBumpMap = textureLoader.load("crate0/crate0_bump.png");
+			crateNormalMap = textureLoader.load("crate0/crate0_normal.png");
+			//texture loader for mur
+		textmur =textureLoader.load("crate0/mur.png");  // texture mta3 el 7iit
+		textmur2 =textureLoader.load("crate0/Pflastergrau.png");  // texture mta3 el 7iit 27it el de5el fel map
+		textmur3 =textureLoader.load("crate0/PflastergrauDISP_BUMP2.png");  // texture mta3 el 7iit 27it el de5el fel map
+		textfloor =textureLoader.load("crate0/floor.png");  //textutre mta3 el ardh
+
+
+			crate = new THREE.Mesh(
+				new THREE.BoxGeometry(3,3,3),
+				new THREE.MeshPhongMaterial({
+					color:0xffffff,
+					map:crateTexture,
+					bumpMap:crateBumpMap,
+					normalMap:crateNormalMap
+				})
+			);
+			scene.add(crate);
+			//crate.addEventListener('collision', handleCollision);
+			crate.position.set(-7, 3/2, 4);
+			crate.receiveShadow = true;
+			crate.castShadow = true;
+
+
+
+		//creation mur
+
+		meshmur = new THREE.Mesh(
+			new THREE.BoxGeometry(70,50,1),
+			new THREE.MeshPhongMaterial({map:textmur, wireframe:USE_WIREFRAME})
+		);
+		meshmur.position.set(1, 0.2, 35);
+		meshmur.receiveShadow = true;
+		meshmur.castShadow = true;
+		scene.add(meshmur);
+
+
+		meshmur2 = new THREE.Mesh(
+			new THREE.BoxGeometry(70,50,1),
+			new THREE.MeshPhongMaterial({map:textmur, wireframe:USE_WIREFRAME})
+		);
+		meshmur2.position.set(1, 0.2, -35);
+		meshmur2.receiveShadow = true;
+		meshmur2.castShadow = true;
+		scene.add(meshmur2);
+
+		meshmur3 = new THREE.Mesh(
+			new THREE.BoxGeometry(1,50,100),
+			new THREE.MeshPhongMaterial({map:textmur, wireframe:USE_WIREFRAME})
+		);
+		meshmur3.position.set(-35, 0.2, 10);
+		meshmur3.receiveShadow = true;
+		meshmur3.castShadow = true;
+		scene.add(meshmur3);
+
+		meshmur4 = new THREE.Mesh(
+			new THREE.BoxGeometry(1,50,100),
+			new THREE.MeshPhongMaterial({map:textmur, wireframe:USE_WIREFRAME})
+		);
+		meshmur4.position.set(35, 0.2, 10);
+		meshmur4.receiveShadow = true;
+		meshmur4.castShadow = true;
+		scene.add(meshmur4);
+
+
+// mur dans la map
+//mur1
+mur1 = new THREE.Mesh(
+	new THREE.BoxGeometry(1,20,40),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur1.position.set(20, 0.2, 10);
+mur1.receiveShadow = true;
+mur1.castShadow = true;
+scene.add(mur1);
+
+//mur 5 bel 3aks
+
+mur5 = new THREE.Mesh(
+	new THREE.BoxGeometry(1,20,40),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur5.position.set(30, 0.2, 10);
+mur5.receiveShadow = true;
+mur5.castShadow = true;
+scene.add(mur5);
+
+
+//mur 8 bel 3aks
+
+mur8 = new THREE.Mesh(
+	new THREE.BoxGeometry(1,20,37),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur8.position.set(-20, 0.2,7);
+mur8.receiveShadow = true;
+mur8.castShadow = true;
+scene.add(mur8);
+
+//mur 12 bel 3aks
+
+mur12 = new THREE.Mesh(
+	new THREE.BoxGeometry(1,20,37),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur12.position.set(-30, 0.2,7);
+mur12.receiveShadow = true;
+mur12.castShadow = true;
+scene.add(mur12);
+
+//mur2 bel 3aks
+mur2 = new THREE.Mesh(
+	new THREE.BoxGeometry(1,20,40),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur2.position.set(10, 0.2,3 );
+mur2.receiveShadow = true;
+mur2.castShadow = true;
+scene.add(mur2);
+
+//mur3 m9abel el camera
+
+mur3= new THREE.Mesh(
+	new THREE.BoxGeometry(40,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur3.position.set(1, 0.2,30 );
+mur3.receiveShadow = true;
+mur3.castShadow = true;
+scene.add(mur3);
+
+//mmur 5 9abel el camera
+mur4= new THREE.Mesh(
+	new THREE.BoxGeometry(40,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur3.position.set(1, 0.2,30 );
+mur3.receiveShadow = true;
+mur3.castShadow = true;
+scene.add(mur4);
+
+//mmur6 m9abel el camera
+mur6= new THREE.Mesh(
+	new THREE.BoxGeometry(30,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur6.position.set(1, 0.2,-10 );
+mur6.receiveShadow = true;
+mur6.castShadow = true;
+scene.add(mur6);
+
+//mmur7 m9abel el camera
+mur7= new THREE.Mesh(
+	new THREE.BoxGeometry(30,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur7.position.set(-10, 0.2,10 );
+mur7.receiveShadow = true;
+mur7.castShadow = true;
+scene.add(mur7);
+//mmur9 m9abel el camera
+mur9= new THREE.Mesh(
+	new THREE.BoxGeometry(20,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur9.position.set(-5, 0.2,20 );
+mur9.receiveShadow = true;
+mur9.castShadow = true;
+scene.add(mur9);
+
+//mmur10 m9abel el camera
+mur10= new THREE.Mesh(
+	new THREE.BoxGeometry(9,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur10.position.set(25, 0.2,20 );
+mur10.receiveShadow = true;
+mur10.castShadow = true;
+scene.add(mur10);
+
+//mmur11 m9abel el camera
+mur11= new THREE.Mesh(
+	new THREE.BoxGeometry(50,20,1),
+	new THREE.MeshPhongMaterial({map:textmur3, wireframe:USE_WIREFRAME})
+);
+mur11.position.set(2, 0.2,-23 );
+mur11.receiveShadow = true;
+mur11.castShadow = true;
+scene.add(mur11);
+
+
+			// Load models
+			// REMEMBER: Loading in Javascript is asynchronous, so you need
+			// to wrap the code in a function and pass it the index. If you
+			// don't, then the index '_key' can change while the model is being
+			// downloaded, and so the wrong model will be matched with the wrong
+			// index key.
+			for( var _key in models ){
+				(function(key){
+
+					var mtlLoader = new THREE.MTLLoader(loadingManager);
+					mtlLoader.load(models[key].mtl, function(materials){
+						materials.preload();
+
+						var objLoader = new THREE.OBJLoader(loadingManager);
+
+						objLoader.setMaterials(materials);
+						objLoader.load(models[key].obj, function(mesh){
+
+							mesh.traverse(function(node){
+								if( node instanceof THREE.Mesh ){
+									if('castShadow' in models[key])
+										node.castShadow = models[key].castShadow;
+									else
+										node.castShadow = true;
+
+									if('receiveShadow' in models[key])
+										node.receiveShadow = models[key].receiveShadow;
+									else
+										node.receiveShadow = true;
+								}
+							});
+							models[key].mesh = mesh;
+
+						});
+					});
+
+				})(_key);
+			}
+
+
+
+
+
+			camera.position.set(0, player.height, -5);
+			camera.lookAt(new THREE.Vector3(0,player.height,0));
+
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize(1280, 720);
+
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.BasicShadowMap;
+
+			document.body.appendChild(renderer.domElement);
+
+			animate();
+			scene.simulate();
+		}
+
+		// Runs when all resources are loaded
+		function onResourcesLoaded(){
+
+			// Clone models into meshes.
+			meshes["tent1"] = models.tent.mesh.clone();
+			meshes["tent2"] = models.tent.mesh.clone();
+			meshes["campfire1"] = models.campfire.mesh.clone();
+			meshes["campfire2"] = models.campfire.mesh.clone();
+			meshes["pirateship"] = models.pirateship.mesh.clone();
+			meshes["wall"] = models.c.mesh.clone();
+
+
+						meshes["wall"].position.set(-30, 1, 20);
+						meshes["wall"].scale.set(1,1,1);
+						//scene.add(meshes["wall"]);
+
+			// Reposition individual meshes, then add meshes to scene
+			meshes["tent1"].position.set(2, 0, 4);
+			scene.add(meshes["tent1"]);
+
+			meshes["tent2"].position.set(3, 0, 4);
+			scene.add(meshes["tent2"]);
+
+			meshes["campfire1"].position.set(-5, 0, 1);
+			meshes["campfire2"].position.set(-8, 0, 1);
+
+			scene.add(meshes["campfire1"]);
+			scene.add(meshes["campfire2"]);
+
+			meshes["pirateship"].position.set(-11, -1, 7);
+			meshes["pirateship"].rotation.set(0, Math.PI, 0); // Rotate it to face the other way.
+			meshes["pirateship"].scale.set(0.8,0.8,0.8);
+			scene.add(meshes["pirateship"]);
+
+			// player weapon
+			meshes["playerweapon"] = models.uzi.mesh.clone();
+			meshes["playerweapon"].position.set(0,2,0);
+			meshes["playerweapon"].scale.set(10,10,10);
+			scene.add(meshes["playerweapon"]);
+
+
+		}
+
+		function animate(){
+
+			// Play the loading screen until resources are loaded.
+			if( RESOURCES_LOADED == false ){
+				requestAnimationFrame(animate);
+
+				loadingScreen.box.position.x -= 0.05;
+				if( loadingScreen.box.position.x < -10 ) loadingScreen.box.position.x = 10;
+				loadingScreen.box.position.y = Math.sin(loadingScreen.box.position.x);
+
+				renderer.render(loadingScreen.scene, loadingScreen.camera);
+				return;
+			}
+
+
+			requestAnimationFrame(animate);
+
+			render = function() {
+				scene.simulate(); // run physics
+				renderer.render( scene, camera); // render the scene
+				requestAnimationFrame( render );
+			};
+			requestAnimationFrame(render);
+
+
+
+			var time = Date.now() * 0.0005;
+			var delta = clock.getDelta();
+
+			mesh.rotation.x += 0.01;
+			mesh.rotation.y += 0.02;
+			crate.rotation.y += 0.01;
+			// Uncomment for absurdity!
+			// meshes["pirateship"].rotation.z += 0.01;
+
+			// go through bullets array and update position
+			// remove bullets when appropriate
+			for(var index=0; index<bullets.length; index+=1){
+				if( bullets[index] === undefined ) continue;
+				if( bullets[index].alive == false ){
+					bullets.splice(index,1);
+					continue;
+				}
+
+				bullets[index].position.add(bullets[index].velocity);
+			}
+
+			if(keyboard[87]){ // W key
+				camera.position.x -= Math.sin(camera.rotation.y) * player.speed;
+				camera.position.z -= -Math.cos(camera.rotation.y) * player.speed;
+			}
+			if(keyboard[83]){ // S key
+				camera.position.x += Math.sin(camera.rotation.y) * player.speed;
+				camera.position.z += -Math.cos(camera.rotation.y) * player.speed;
+			}
+			if(keyboard[65]){ // A key
+				camera.position.x += Math.sin(camera.rotation.y + Math.PI/2) * player.speed;
+				camera.position.z += -Math.cos(camera.rotation.y + Math.PI/2) * player.speed;
+			}
+			if(keyboard[68]){ // D key
+				camera.position.x += Math.sin(camera.rotation.y - Math.PI/2) * player.speed;
+				camera.position.z += -Math.cos(camera.rotation.y - Math.PI/2) * player.speed;
+			}
+
+			if(keyboard[37]){ // left arrow key
+				camera.rotation.y -= player.turnSpeed;
+			}
+			if(keyboard[39]){ // right arrow key
+				camera.rotation.y += player.turnSpeed;
+			}
+
+			// shoot a bullet
+			if(keyboard[32] && player.canShoot <= 0){ // spacebar key
+				// creates a bullet as a Mesh object
+				var bullet = new THREE.Mesh(
+					new THREE.SphereGeometry(0.05,8,8),
+					new THREE.MeshBasicMaterial({color:0xffffff})
+				);
+				// this is silly.
+				// var bullet = models.pirateship.mesh.clone();
+
+				// position the bullet to come from the player's weapon
+				bullet.position.set(
+					meshes["playerweapon"].position.x,
+					meshes["playerweapon"].position.y + 0.15,
+					meshes["playerweapon"].position.z
+				);
+
+				// set the velocity of the bullet
+				bullet.velocity = new THREE.Vector3(
+					-Math.sin(camera.rotation.y),
+					0,
+					Math.cos(camera.rotation.y)
+				);
+
+				// after 1000ms, set alive to false and remove from scene
+				// setting alive to false flags our update code to remove
+				// the bullet from the bullets array
+				bullet.alive = true;
+				setTimeout(function(){
+					bullet.alive = false;
+					scene.remove(bullet);
+				}, 1000);
+
+				// add to scene, array, and set the delay to 10 frames
+				bullets.push(bullet);
+				scene.add(bullet);
+				player.canShoot = 10;
+			}
+			if(player.canShoot > 0) player.canShoot -= 1;
+
+			// position the gun in front of the camera
+			meshes["playerweapon"].position.set(
+				camera.position.x - Math.sin(camera.rotation.y + Math.PI/6) * 0.75,
+				camera.position.y - 0.5 + Math.sin(time*4 + camera.position.x + camera.position.z)*0.01,
+				camera.position.z + Math.cos(camera.rotation.y + Math.PI/6) * 0.75
+			);
+			meshes["playerweapon"].rotation.set(
+				camera.rotation.x,
+				camera.rotation.y - Math.PI,
+				camera.rotation.z
+			);
+
+			renderer.render(scene, camera);
+
+		}
+
+		function keyDown(event){
+			keyboard[event.keyCode] = true;
+		}
+
+		function keyUp(event){
+			keyboard[event.keyCode] = false;
+		}
+
+		window.addEventListener('keydown', keyDown);
+		window.addEventListener('keyup', keyUp);
+
+		window.onload = init;
+
+
+	</script>
+	</body>
+</html>
